@@ -45,7 +45,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testNonCJKPassThru() throws Exception
 	{
-		assertAnalyzesTo(analyzer, "pass 多くの学生が me 試験に落ちた thru", new String[] { "pass", "me", "thru" }, new int[] { 0, 5, 7 }, new int[] { 4, 6, 11 }, new String[] { "word", "word", "word"}, new int[] { 1, 1, 1 });
+		assertAnalyzesTo(analyzer, "pass 多くの学生が me 試験に落ちた thru", new String[] { "pass", "me", "thru" }, new int[] { 0, 5, 7 }, new int[] { 4, 6, 11 }, new String[] { "<ALPHANUM>", "<ALPHANUM>", "<ALPHANUM>"}, new int[] { 1, 1, 1 });
 
 //		TokenStream stream = new MockTokenizer(new StringReader("pass  多くの学生が me 試験に落ちた thru"));
 //		assertAnalyzesTo(analyzer, "Ｔｅｓｔ １２３４", new String[] { "Test", "1234" }, new int[] { 0, 5 }, new int[] { 4, 9 });

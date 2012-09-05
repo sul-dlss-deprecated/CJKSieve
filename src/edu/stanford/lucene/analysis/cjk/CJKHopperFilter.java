@@ -1,11 +1,13 @@
 package edu.stanford.lucene.analysis.cjk;
 
 import java.io.IOException;
+import java.util.*;
 
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.*;
+import org.apache.lucene.util.AttributeSource;
 
 /**
  * Emits CJK unigram tokens that are generated from StandardTokenizer
@@ -17,6 +19,8 @@ import org.apache.lucene.analysis.tokenattributes.*;
  * <p>
  * In all cases, all non-CJK input is passed thru or removed, depending on
  * non-CJK flag.
+ *
+ * cache implementation from   org.apache.lucene.analysis.CachingTokenFilter
  *
  * @author Naomi Dushay
  *
@@ -58,6 +62,9 @@ public class CJKHopperFilter extends TokenFilter
 	private final OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
 	private final PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
 
+	private List<AttributeSource.State> cache = null;
+	private Iterator<AttributeSource.State> iterator = null;
+	private AttributeSource.State finalState;
 
 	/**
 	 * Calls {@link CJKHopperFilter#CJKBigramFilter(TokenStream, int)
@@ -100,7 +107,7 @@ public class CJKHopperFilter extends TokenFilter
 		emitKatakana = (flags & KATAKANA) == 0 ? false : true;
 		emitHangul = (flags & HANGUL) == 0 ? false : true;
 		this.emitNonCJK = emitNonCJK;
-		readTokenStreamThenReset();
+//		readTokenStreamThenReset();
 	}
 
 
@@ -130,22 +137,9 @@ public class CJKHopperFilter extends TokenFilter
 		reset();
 //		input.reset();
 		input.restoreState(beforeState);
-
-
-		 @Override
-		  public void reset() throws IOException {
-		    // reset our internal state
-		    bufferIndex = 0;
-		    offset = 0;
-		    dataLen = 0;
-		    finalOffset = 0;
-		    ioBuffer.reset(); // make sure to reset the IO buffer!!
-		  }
-
-
 	}
 
-
+/*
 	@Override
 	public boolean incrementToken() throws IOException
 	{
@@ -179,6 +173,79 @@ public class CJKHopperFilter extends TokenFilter
 	    }
 	    else
 	    	return false;
+	}
+*/
+
+
+	@Override
+	public final boolean incrementToken() throws IOException
+	{
+		if (cache == null) {
+			// fill cache lazily
+			cache = new LinkedList<AttributeSource.State>();
+			fillCache();
+			iterator = cache.iterator();
+		}
+
+		if (iterator.hasNext())
+		{
+			// Since the TokenFilter can be reset, the tokens need to be preserved as immutable.
+			restoreState(iterator.next());
+
+			if (emitHan && haveHan)
+				return true;
+			if (emitHiragana && haveHiragana)
+				return true;
+			if (emitKatakana && haveKatakana)
+				return true;
+			if (emitHangul && haveHangul)
+				return true;
+			if (emitNonCJK && haveNonCJK)
+				return true;
+
+			return false;
+
+		}
+
+		// else the cache is exhausted, return false
+		return false;
+	}
+
+	@Override
+	public final void end() throws IOException
+	{
+		if (finalState != null) {
+			restoreState(finalState);
+		}
+	}
+
+	@Override
+	public void reset() throws IOException
+	{
+		if(cache != null) {
+			iterator = cache.iterator();
+		}
+	}
+
+	private void fillCache() throws IOException
+	{
+		while(input.incrementToken()) {
+			cache.add(captureState());
+			String type = typeAtt.type();
+			if (type == HAN_TYPE)
+				haveHan = true;
+			else if (type == HIRAGANA_TYPE)
+				haveHiragana = true;
+			else if (type == KATAKANA_TYPE)
+				haveKatakana = true;
+			else if (type == HANGUL_TYPE)
+				haveHangul = true;
+			else
+				haveNonCJK = true;
+		}
+		// capture final state
+		input.end();
+		finalState = captureState();
 	}
 
 }
