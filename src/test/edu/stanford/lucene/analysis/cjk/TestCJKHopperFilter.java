@@ -1,11 +1,9 @@
 package edu.stanford.lucene.analysis.cjk;
 
 import java.io.*;
-import java.util.Random;
 
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.*;
 import org.junit.Test;
 
 /**
@@ -18,55 +16,11 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
     	System.setProperty("tests.asserts.gracious", "true");
     }
 
-	private Analyzer analyzer = new ReusableAnalyzerBase()
-	{
-		@Override
-		protected TokenStreamComponents createComponents(String fieldName, Reader reader)
-		{
-			Tokenizer t = new StandardTokenizer(TEST_VERSION_CURRENT, reader);
-			try
-			{
-				return new TokenStreamComponents(t, new CJKHopperFilter(t, 0x00, true));
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-
-			// Tokenizer source = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-			// return new TokenStreamComponents(source, new CJKHopperFilter(t, CJKHopperFilter.HAN, true));
-			return null;
-		}
-	};
-
-	// TODO: test non-CJK only
-@Test
-	public void testNonCJKPassThru() throws Exception
-	{
-		assertAnalyzesTo(
-				getStdTokenAnalyzer(0x00, false, false, true),
-				"pass 多くの学生が me 試験に落ちた thru",
-				new String[] { "pass", "me", "thru" },
-				new int[] { 0, 5, 7 },   // startOffsets
-				new int[] { 4, 6, 11 },  // endOffsets
-				new String[] { "<ALPHANUM>", "<ALPHANUM>", "<ALPHANUM>"},
-				new int[] { 1, 1, 1 });  // positionIncrements
-
-//		TokenStream stream = new MockTokenizer(new StringReader("pass  多くの学生が me 試験に落ちた thru"));
-//		assertAnalyzesTo(analyzer, "Ｔｅｓｔ １２３４", new String[] { "Test", "1234" }, new int[] { 0, 5 }, new int[] { 4, 9 });
-	}
-
-	/*
-	 * public static void assertAnalyzesTo(Analyzer a, String input, String[] output, int startOffsets[], int endOffsets[], String types[], int posIncrements[], int posLengths[]) throws IOException {
-	 *   assertTokenStreamContents(a.tokenStream("dummy", new StringReader(input)), output, startOffsets, endOffsets, types, posIncrements, posLengths, input.length());
-	 * }
-	 */
-
 @Test
 	public void testJapaneseEmitsIfHiraganaPresent() throws Exception
 	{
 		// another possible test string:   を知るための is hiragana except 知 which is kanji
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.JAPANESE),
 			"近世仮名遣い論の研究 -- chars 6, 8: い の are hiragana",
 			new String[] { "近", "世", "仮", "名", "遣", "い", "論", "の", "研", "究", "chars", "6", "8", "い", "の", "are", "hiragana" },
 			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 20, 23, 26, 28, 30, 34 },   // startOffsets
@@ -78,7 +32,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseEmitsIfKatakanaPresent() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.JAPANESE),
 			"マンガ is katakana",
 			new String[] { "マンガ", "is",  "katakana" },
 			new int[] { 0, 4, 7 },   // startOffsets
@@ -90,7 +44,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseEmitsIfBothPresent() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.JAPANESE),
 			"日本マンガを知るためのブック・ガイド",
 			new String[] { "日", "本", "マンガ", "を", "知", "る", "た", "め", "の", "ブック", "ガイド" },
 			new int[] { 0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 15 },   // startOffsets
@@ -100,26 +54,25 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	}
 
 @Test
-	public void testJapaneseNothingOutIfScriptsAbsent() throws Exception
+	public void testJapaneseDoesNotEmitIfScriptsAbsent() throws Exception
 	{
-		Analyzer a = getStdTokenAnalyzer(0x00, false, true, false);
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.JAPANESE);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
 	}
 
-
 @Test
 	public void testEmitIfHangulPresent() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HANGUL),
 			"한국경제 hangul",
 			new String[] { "한국경제", "hangul" },
 			new int[] { 0, 5 },   // startOffsets
 			new int[] { 4, 11 },  // endOffsets
 			new String[] { "<HANGUL>", "<ALPHANUM>" },
 			new int[] { 1, 1 });  // positionIncrements
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HANGUL),
 			"한국사 의 壇君 인식 hangul and hancha",
 			new String[] { "한국사", "의", "壇", "君", "인식", "hangul", "and", "hancha" },
 			new int[] { 0, 4, 6, 7, 9, 12, 19, 23 },   // startOffsets
@@ -128,129 +81,160 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
 	}
 
+@Test
+	public void testDoesNotEmitIfHangulAbsent() throws Exception
+	{
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HANGUL);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+	}
+
 	// test Han only
 @Test
 	public void testTraditionalHanOnly() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HAN_SOLO),
 			"南滿洲鐵道株式會社 traditional han",
 			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
-			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 23 },   // startOffsets
-			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 26 },  // endOffsets
+			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 22 },   // startOffsets
+			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 25 },  // endOffsets
 			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
 			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
 	}
 
-	// test more complex variants
 
-	// testLain1Accents() is a copy of TestLatin1AccentFilter.testU().
-	public void testLatin1Accents() throws Exception
+@Test
+	public void testEmitIfCJKAbsent() throws Exception
 	{
-		TokenStream stream = new MockTokenizer(new StringReader("Des mot clés À LA CHAÎNE À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ĳ Ð Ñ" + " Ò Ó Ô Õ Ö Ø Œ Þ Ù Ú Û Ü Ý Ÿ à á â ã ä å æ ç è é ê ë ì í î ï ĳ" + " ð ñ ò ó ô õ ö ø œ ß þ ù ú û ü ý ÿ ﬁ ﬂ"), MockTokenizer.WHITESPACE, false);
-		ASCIIFoldingFilter filter = new ASCIIFoldingFilter(stream);
-
-		CharTermAttribute termAtt = filter.getAttribute(CharTermAttribute.class);
-		filter.reset();
-		assertTermEquals("Des", filter, termAtt);
-		assertTermEquals("fl", filter, termAtt);
-		assertFalse(filter.incrementToken());
-		fail("here for reference");
+		assertAnalyzesTo(
+			getStdTokenAnalyzer(CJKEmitType.NO_CJK),
+			"No CJK here",
+			new String[] { "No", "CJK", "here" },
+			new int[] { 0, 3, 7 },   // startOffsets
+			new int[] { 2, 6, 11 },  // endOffsets
+			new String[] { "<ALPHANUM>", "<ALPHANUM>", "<ALPHANUM>"},
+			new int[] { 1, 1, 1 });  // positionIncrements
 	}
 
-	/** blast some random strings through the analyzer */
-	public void testRandomStrings() throws Exception
+@Test
+	public void testDoesNotEmitIfCJKPresent() throws Exception
 	{
-		Analyzer a = new ReusableAnalyzerBase()
-		{
-
-			@Override
-			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
-			{
-				Tokenizer tokenizer = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-				return new TokenStreamComponents(tokenizer, new ASCIIFoldingFilter(tokenizer));
-			}
-		};
-		checkRandomData(random, a, 10000 * RANDOM_MULTIPLIER);
-		fail("here for reference");
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.NO_CJK);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("don't pass 多くの学生が me 試験に落ちた thru")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
 	}
 
-	public void testEmptyTerm() throws IOException
-	{
-		Analyzer a = new ReusableAnalyzerBase()
-		{
-			@Override
-			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
-			{
-				Tokenizer tokenizer = new KeywordTokenizer(reader);
-				return new TokenStreamComponents(tokenizer, new ASCIIFoldingFilter(tokenizer));
-			}
-		};
-		checkOneTermReuse(a, "", "");
-		fail("here for reference");
-	}
 
-	public void testHuge() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた", new String[] { "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた", "た多", "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた" });
-		fail("here for reference");
-	}
-
-	public void testHanOnly() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた。", new String[] { "多", "く", "の", "学生", "が", "試験", "に", "落", "ち", "た" }, new int[] { 0, 1, 2, 3, 5, 6, 8, 9, 10, 11 }, new int[] { 1, 2, 3, 5, 6, 8, 9, 10, 11, 12 }, new String[] { "<SINGLE>", "<HIRAGANA>", "<HIRAGANA>", "<DOUBLE>", "<HIRAGANA>", "<DOUBLE>", "<HIRAGANA>", "<SINGLE>", "<HIRAGANA>", "<HIRAGANA>", "<SINGLE>" }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });
-		fail("here for reference");
-	}
-
-	public void testAllScripts() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた。", new String[] { "多く", "くの", "の学", "学生", "生が", "が試", "試験", "験に", "に落", "落ち", "ちた" });
-		fail("here for reference");
-	}
-
-	public void testUnigramsAndBigramsAllScripts() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた。", new String[] { "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た" }, new int[] { 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11 }, new int[] { 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12 }, new String[] { "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<DOUBLE>", "<SINGLE>" }, new int[] { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 }, new int[] { 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 });
-		fail("here for reference");
-	}
-
-	public void testUnigramsAndBigramsHanOnly() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた。", new String[] { "多", "く", "の", "学", "学生", "生", "が", "試", "試験", "験", "に", "落", "ち", "た" }, new int[] { 0, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11 }, new int[] { 1, 2, 3, 4, 5, 5, 6, 7, 8, 8, 9, 10, 11, 12 }, new String[] { "<SINGLE>", "<HIRAGANA>", "<HIRAGANA>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<HIRAGANA>", "<SINGLE>", "<DOUBLE>", "<SINGLE>", "<HIRAGANA>", "<SINGLE>", "<HIRAGANA>", "<HIRAGANA>", "<SINGLE>" }, new int[] { 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1 }, new int[] { 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1 });
-		fail("here for reference");
-	}
-
-	public void testUnigramsAndBigramsHuge() throws Exception
-	{
-		assertAnalyzesTo(analyzer, "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた" + "多くの学生が試験に落ちた", new String[] { "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た", "た多", "多", "多く", "く", "くの", "の", "の学", "学", "学生", "生", "生が", "が", "が試", "試", "試験", "験", "験に", "に", "に落", "落", "落ち", "ち", "ちた", "た" });
-		fail("here for reference");
-	}
-
-	void assertTermEquals(String expected, TokenStream stream, CharTermAttribute termAtt) throws Exception
-	{
-		assertTrue(stream.incrementToken());
-		assertEquals(expected, termAtt.toString());
-	}
-
+//public void testReusableTokenStream() throws Exception {
+//    Analyzer a = new SmartChineseAnalyzer(Version.LUCENE_CURRENT);
+//    assertAnalyzesToReuse(a, "我购买 Tests 了道具和服装",
+//        new String[] { "我", "购买", "test", "了", "道具", "和", "服装"},
+//        new int[] { 0, 1, 4, 10, 11, 13, 14 },
+//        new int[] { 1, 3, 9, 11, 13, 14, 16 });
+//    assertAnalyzesToReuse(a, "我购买了道具和服装。",
+//        new String[] { "我", "购买", "了", "道具", "和", "服装" },
+//        new int[] { 0, 1, 3, 4, 6, 7 },
+//        new int[] { 1, 3, 4, 6, 7, 9 });
+//  }
+//
+//
+//
+//	  /*
+//	   * English words are lowercased and porter-stemmed.
+//	   */
+//	  public void testMixedLatinChinese() throws Exception {
+//	    assertAnalyzesTo(new SmartChineseAnalyzer(Version.LUCENE_CURRENT, true), "我购买 Tests 了道具和服装",
+//	        new String[] { "我", "购买", "test", "了", "道具", "和", "服装"});
+//	  }
+//
+//	  /*
+//	   * Numerics are parsed as their own tokens
+//	   */
+//	  public void testNumerics() throws Exception {
+//	    assertAnalyzesTo(new SmartChineseAnalyzer(Version.LUCENE_CURRENT, true), "我购买 Tests 了道具和服装1234",
+//	      new String[] { "我", "购买", "test", "了", "道具", "和", "服装", "1234"});
+//	  }
+//	  /** blast some random strings through the analyzer */
+//	  public void testRandomStrings() throws Exception {
+//	    checkRandomData(random,  getStdTokenAnalyzer(CJKEmitType.NO_CJK), 10000*RANDOM_MULTIPLIER);
+//	  }
+//
+//	  /** blast some random large strings through the analyzer */
+//	  public void testRandomHugeStrings() throws Exception {
+//	    checkRandomData(random,  getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 200*RANDOM_MULTIPLIER, 8192);
+//	  }
+//
+//	  public void testEmptyTerm() throws IOException {
+//	    Analyzer a = new ReusableAnalyzerBase() {
+//	      @Override
+//	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
+//	        Tokenizer tokenizer = new KeywordTokenizer(reader);
+//	        return new TokenStreamComponents(tokenizer, new WordTokenFilter(tokenizer));
+//	      }
+//	    };
+//	    checkAnalysisConsistency(random, a, random.nextBoolean(), "");
+//	  }
+//	  // LUCENE-3026
+//	  public void testLargeDocument() throws Exception {
+//	    StringBuilder sb = new StringBuilder();
+//	    for (int i = 0; i < 5000; i++) {
+//	      sb.append("我购买了道具和服装。");
+//	    }
+//	    Analyzer analyzer = new SmartChineseAnalyzer(TEST_VERSION_CURRENT);
+//	    TokenStream stream = analyzer.reusableTokenStream("", new StringReader(sb.toString()));
+//	    stream.reset();
+//	    while (stream.incrementToken()) {
+//	    }
+//	  }
+//
+//	  // LUCENE-3026
+//	  public void testLargeSentence() throws Exception {
+//	    StringBuilder sb = new StringBuilder();
+//	    for (int i = 0; i < 5000; i++) {
+//	      sb.append("我购买了道具和服装");
+//	    }
+//	    Analyzer analyzer = new SmartChineseAnalyzer(TEST_VERSION_CURRENT);
+//	    TokenStream stream = analyzer.reusableTokenStream("", new StringReader(sb.toString()));
+//	    stream.reset();
+//	    while (stream.incrementToken()) {
+//	    }
+//	  }
+//
+//	  // LUCENE-3642
+//	  public void testInvalidOffset() throws Exception {
+//	    Analyzer analyzer = new ReusableAnalyzerBase() {
+//	      @Override
+//	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
+//	        Tokenizer tokenizer = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
+//	        TokenFilter filters = new ASCIIFoldingFilter(tokenizer);
+//	        filters = new WordTokenFilter(filters);
+//	        return new TokenStreamComponents(tokenizer, filters);
+//	      }
+//	    };
+//
+//	    assertAnalyzesTo(analyzer, "mosfellsbær",
+//	        new String[] { "mosfellsbaer" },
+//	        new int[]    { 0 },
+//	        new int[]    { 11 });
+//	  }
+//
 
 	/**
-	 * @param flags OR'ed set from {@link CJKHopperFilter#HAN},
-	 *            {@link CJKHopperFilter#HIRAGANA},
-	 *            {@link CJKHopperFilter#KATAKANA},
-	 *            {@link CJKHopperFilter#HANGUL}
-	 * @param emitIfNoCJK true if non-CJK script characters should also be output.
+	 * TODO: write comment
 	 */
-	private Analyzer getStdTokenAnalyzer(final int flags, final boolean emitIfHangul, final boolean emitIfJapanese, final boolean emitIfNoCJK) {
+	private Analyzer getStdTokenAnalyzer(final CJKEmitType emitType) {
 		Analyzer analyzer = new ReusableAnalyzerBase()
 		{
 			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
 			{
 				Tokenizer t = new StandardTokenizer(TEST_VERSION_CURRENT, reader);
-				try
-				{
-					return new TokenStreamComponents(t, new CJKHopperFilter(t, flags, emitIfHangul, emitIfJapanese, emitIfNoCJK));
-				}
-				catch (IOException e) { e.printStackTrace(); }
-				return null;
+				return new TokenStreamComponents(t, new CJKHopperFilter(t, emitType));
+				// Tokenizer source = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
+				// return new TokenStreamComponents(source, new CJKHopperFilter(t, CJKHopperFilter.HAN, true));
 			}
 		};
 

@@ -10,15 +10,15 @@ import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.util.AttributeSource;
 
 /**
- * Emits CJK unigram tokens that are generated from StandardTokenizer
- * or ICUTokenizer, depending on values of flags.
+ * Emits tokens that are generated from StandardTokenizer or ICUTokenizer,
+ * depending on value of emitType
  * <p>
- * CJK types are set by these tokenizers, but you can also use
- * {@link #CJKHopperFilter(TokenStream, int)} to explicitly control which of the
- * CJK scripts are emitted.
+ * If emitType is:
+ *  HANGUL, then only emit tokens if at least one Hangul character is found.
+ *  JAPANESE, then only emit tokens if at least one Hiragana or Katakana character is found
+ *  HAN_SOLO, then only emit tokens if at least one Han character is found, and no Hangul, Hiragana or Katakana chars are found
+ *  NO_CJK, then only emit tokens if no characters are found in Han, Hiragana, Katakana or Hangul scripts.
  * <p>
- * In all cases, all non-CJK input is passed thru or removed, depending on
- * non-CJK flag.
  *
  * cache implementation from   org.apache.lucene.analysis.CachingTokenFilter
  *
@@ -27,41 +27,14 @@ import org.apache.lucene.util.AttributeSource;
  */
 public class CJKHopperFilter extends TokenFilter
 {
-	// configuration
-	/** emit flag for Han Ideographs */
-	public static final int HAN = 1;
-	/** emit flag for Hiragana */
-	public static final int HIRAGANA = 2;
-	/** emit flag for Katakana */
-	public static final int KATAKANA = 4;
-	/** emit flag for Hangul */
-	public static final int HANGUL = 8;
-
-	/** when we emit a bigram, its then marked as this type */
-	// public static final String DOUBLE_TYPE = "<DOUBLE>";
-	/** when we emit a unigram, its then marked as this type */
-	// public static final String SINGLE_TYPE = "<SINGLE>";
-
 	// the types from StandardTokenizer
 	private static final String HAN_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.IDEOGRAPHIC];
 	private static final String HIRAGANA_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.HIRAGANA];
 	private static final String KATAKANA_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.KATAKANA];
 	private static final String HANGUL_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.HANGUL];
 
-	// these are set to true if we want to pass the script through; false otherwise
-	private final boolean emitHan;
-	private final boolean emitHiragana;
-	private final boolean emitKatakana;
-	private final boolean emitHangul;
-
-	/** true if we should emit tokens when no CJK script characters are present */
-	private final boolean emitIfNoCJK;
-
-	/** true if we should emit tokens when Hiragana or Katakana script characters are present */
-	private final boolean emitIfJapanese;
-
-	/** true if we should emit tokens when Hangul script characters are present */
-	private final boolean emitIfHangul;
+	/** under which conditions should this filter emit tokens? */
+	private final CJKEmitType emitType;
 
 	private boolean tokensHaveHan = false;
 	private boolean tokensHaveHiragana = false;
@@ -76,73 +49,14 @@ public class CJKHopperFilter extends TokenFilter
 	private AttributeSource.State finalState;
 
 	/**
-	 * Calls {@link CJKHopperFilter#CJKBigramFilter(TokenStream, int)
-	 * CJKHopperFilter(HAN | HIRAGANA | KATAKANA | HANGUL)}
-	 * @throws IOException
+	 * Create a new CJKHopperFilter, emitting tokens per emitType
+	 * @param in
+	 * @param emitType from {@link CJKEmitType},
 	 */
-	public CJKHopperFilter(TokenStream in) throws IOException
-	{
-		this(in, HAN | HIRAGANA | KATAKANA | HANGUL);
-	}
-
-	/**
-	 * Calls {@link CJKHopperFilter#CJKHopperFilter(TokenStream, int, boolean)
-	 * CJKHopperFilter(in, flags, false)}
-	 * @throws IOException
-	 */
-	public CJKHopperFilter(TokenStream in, int flags) throws IOException
-	{
-		this(in, flags, false);
-	}
-
-	/**
-	 * Create a new CJKHopperFilter, specifying which writing systems should be
-	 * emitted,
-	 * and whether or not non-CJK scripts should also be output.
-	 *
-	 * @param flags OR'ed set from {@link CJKHopperFilter#HAN},
-	 *            {@link CJKHopperFilter#HIRAGANA},
-	 *            {@link CJKHopperFilter#KATAKANA},
-	 *            {@link CJKHopperFilter#HANGUL}
-	 * @param emitNonCJK true if non-CJK script characters should also be
-	 *            output.
-	 * @throws IOException
-	 */
-	public CJKHopperFilter(TokenStream in, int flags, boolean emitNonCJK) throws IOException
+	public CJKHopperFilter(TokenStream in, CJKEmitType emitType)
 	{
 		super(in);
-		emitHan = (flags & HAN) == 0 ? false : true;
-		emitHiragana = (flags & HIRAGANA) == 0 ? false : true;
-		emitKatakana = (flags & KATAKANA) == 0 ? false : true;
-		emitHangul = (flags & HANGUL) == 0 ? false : true;
-		this.emitIfNoCJK = emitNonCJK;
-		this.emitIfJapanese = false;
-		this.emitIfHangul = false;
-	}
-
-
-	/**
-	 * Create a new CJKHopperFilter, specifying which writing systems should be
-	 * emitted,
-	 * and whether or not non-CJK scripts should also be output.
-	 *
-	 * @param flags OR'ed set from {@link CJKHopperFilter#HAN},
-	 *            {@link CJKHopperFilter#HIRAGANA},
-	 *            {@link CJKHopperFilter#KATAKANA},
-	 *            {@link CJKHopperFilter#HANGUL}
-	 * @param emitNonCJK true if non-CJK script characters should also be output.
-	 * @throws IOException
-	 */
-	public CJKHopperFilter(TokenStream in, int flags, boolean emitIfHangul, boolean emitIfJapanese, boolean emitNonCJK) throws IOException
-	{
-		super(in);
-		emitHan = (flags & HAN) == 0 ? false : true;
-		emitHiragana = (flags & HIRAGANA) == 0 ? false : true;
-		emitKatakana = (flags & KATAKANA) == 0 ? false : true;
-		emitHangul = (flags & HANGUL) == 0 ? false : true;
-		this.emitIfNoCJK = emitNonCJK;
-		this.emitIfJapanese = emitIfJapanese;
-		this.emitIfHangul = emitIfHangul;
+		this.emitType = emitType;
 	}
 
 	@Override
@@ -160,20 +74,26 @@ public class CJKHopperFilter extends TokenFilter
 		{
 			// Since the TokenFilter can be reset, the tokens need to be preserved as immutable.
 			restoreState(iterator.next());
-			String type = typeAtt.type();
 
-//			if (emitHan && tokensHaveHan)
-//				return true;
-//			if (emitHiragana && tokensHaveHiragana)
-//				return true;
-//			if (emitKatakana && tokensHaveKatakana)
-//				return true;
-			if (emitIfHangul && tokensHaveHangul)
-				return true;
-			if (emitIfJapanese && (tokensHaveHiragana || tokensHaveKatakana))
-				return true;
-			if (emitIfNoCJK && !tokensHaveHan && !tokensHaveHangul && !tokensHaveHiragana && !tokensHaveKatakana)
-				return true;
+			switch (emitType)
+			{
+				case HANGUL:
+					if (tokensHaveHangul)
+						return true;
+					break;
+				case JAPANESE:
+					if (tokensHaveHiragana || tokensHaveKatakana)
+						return true;
+					break;
+				case HAN_SOLO:
+					if (tokensHaveHan &&
+							! (tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana))
+						return true;
+					break;
+				case NO_CJK:
+					if (! (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana))
+						return true;
+			}
 
 			return false;
 		}
