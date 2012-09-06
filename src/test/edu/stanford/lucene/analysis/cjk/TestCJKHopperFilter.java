@@ -101,9 +101,19 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	}
 
 @Test
-	public void testNothingOutIfScriptsAbsent() throws Exception
+	public void testJapaneseNothingOutIfScriptsAbsent() throws Exception
 	{
-		fail("implement me");
+		Analyzer a = getStdTokenAnalyzer(0x00, true, false);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+//		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false),
+//			"南滿洲鐵道株式會社 traditional han",
+//			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
+//			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 23 },   // startOffsets
+//			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 26 },  // endOffsets
+//			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
+//			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
 	}
 
 
