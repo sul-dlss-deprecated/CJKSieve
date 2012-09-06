@@ -27,7 +27,7 @@ import org.apache.lucene.util.AttributeSource;
  */
 public class CJKHopperFilter extends TokenFilter
 {
-	// the types from StandardTokenizer
+	// the CJK token types from StandardTokenizer
 	private static final String HAN_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.IDEOGRAPHIC];
 	private static final String HIRAGANA_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.HIRAGANA];
 	private static final String KATAKANA_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.KATAKANA];

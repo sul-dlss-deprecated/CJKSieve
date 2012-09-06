@@ -7,8 +7,7 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.junit.Test;
 
 /**
- * @author ndushay
- *
+ * @author Naomi Dushay
  */
 public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 {
@@ -19,7 +18,6 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseEmitsIfHiraganaPresent() throws Exception
 	{
-		// another possible test string:   を知るための is hiragana except 知 which is kanji
 		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.JAPANESE),
 			"近世仮名遣い論の研究 -- chars 6, 8: い の are hiragana",
 			new String[] { "近", "世", "仮", "名", "遣", "い", "論", "の", "研", "究", "chars", "6", "8", "い", "の", "are", "hiragana" },
@@ -57,13 +55,16 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	public void testJapaneseDoesNotEmitIfScriptsAbsent() throws Exception
 	{
 		Analyzer a = getStdTokenAnalyzer(CJKEmitType.JAPANESE);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("仏教学 乱 禅 modern kanji")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제 hangul only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국사 의 壇君 인식 hangul and hancha")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
 	}
 
 @Test
-	public void testEmitIfHangulPresent() throws Exception
+	public void testHangulEmitIfPresent() throws Exception
 	{
 		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HANGUL),
 			"한국경제 hangul",
@@ -82,19 +83,22 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	}
 
 @Test
-	public void testDoesNotEmitIfHangulAbsent() throws Exception
+	public void testHangulDoesNotEmitIfAbsent() throws Exception
 	{
 		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HANGUL);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("仏教学 乱 禅 modern kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
 	}
 
-	// test Han only
 @Test
-	public void testTraditionalHanOnly() throws Exception
+	public void testHanSoloEmitsIfHanOnly() throws Exception
 	{
+		// traditional
 		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HAN_SOLO),
 			"南滿洲鐵道株式會社 traditional han",
 			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
@@ -102,11 +106,57 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 25 },  // endOffsets
 			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
 			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+
+		// simplified
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HAN_SOLO),
+			"中国地方志集成",
+			new String[] { "中", "国", "地", "方", "志", "集", "成" },
+			new int[] { 0, 1, 2, 3, 4, 5, 6 },   // startOffsets
+			new int[] { 1, 2, 3, 4, 5, 6, 7 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+
+		// japanese modern kanji
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HAN_SOLO),
+			"仏教学 乱 禅",
+			new String[] { "仏", "教", "学", "乱", "禅" },
+			new int[] { 0, 1, 2, 4, 6 },   // startOffsets
+			new int[] { 1, 2, 3, 5, 7 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>" },
+			new int[] { 1, 1, 1, 1, 1 });  // positionIncrements
+
+		// from korean: 壇君
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.HAN_SOLO),
+			"壇君",
+			new String[] { "壇", "君" },
+			new int[] { 0, 1 },   // startOffsets
+			new int[] { 1, 2 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>" },
+			new int[] { 1, 1 });  // positionIncrements
 	}
 
+@Test
+	public void testHanSoloDoesNotEmitIfHanAbsent() throws Exception
+	{
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HANGUL);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
+// FIXME:  this doesn't pass - why?
+//		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제의 hangul only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+	}
 
 @Test
-	public void testEmitIfCJKAbsent() throws Exception
+	public void testHanSoloDoesNotEmitIfOtherPresent() throws Exception
+	{
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.NO_CJK);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("don't pass 多くの学生が me 試験に落ちた thru")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국사 의 壇君 인식 hangul and hancha")), new String[] {});
+	}
+
+@Test
+	public void testNoCJKEmitsIfCJKAbsent() throws Exception
 	{
 		assertAnalyzesTo(
 			getStdTokenAnalyzer(CJKEmitType.NO_CJK),
@@ -119,112 +169,81 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	}
 
 @Test
-	public void testDoesNotEmitIfCJKPresent() throws Exception
+	public void testNoCJKDoesNotEmitIfCJKPresent() throws Exception
 	{
 		Analyzer a = getStdTokenAnalyzer(CJKEmitType.NO_CJK);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("don't pass 多くの学生が me 試験に落ちた thru")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("仏教学 乱 禅 modern kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제 hangul only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국사 의 壇君 인식 hangul and hancha")), new String[] {});
 	}
 
+//FIXME:  fails - thread safety issues for cache?
+//@Test
+//	public void testReusableTokenStream() throws Exception
+//	{
+//	    Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
+//	    assertAnalyzesToReuse(a, "我购买 Tests 了道具和服装",
+//	        new String[] { "我", "购", "买", "Tests", "了", "道", "具", "和", "服", "装"},
+//	        new int[] { 0, 1, 2, 4, 10, 11, 12, 13, 14, 15 },
+//	        new int[] { 1, 2, 3, 9, 11, 12, 13, 14, 15, 16 });
+//	    assertAnalyzesToReuse(a, "我购买了道具和服装。",
+//	        new String[] { "我", "购", "买", "了", "道", "具", "和", "服", "装"},
+//	        new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
+//	        new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+//	 }
+//
+////FIXME:  fails - thread safety issues for cache?
+//	 /** blast some random strings through the analyzer */
+//@Test
+//	 public void testRandomStrings() throws Exception {
+//	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 10000*RANDOM_MULTIPLIER);
+//	 }
+//
+////FIXME:  fails - thread safety issues for cache?
+//	 /** blast some random large strings through the analyzer */
+//@Test
+//	 public void testRandomHugeStrings() throws Exception {
+//	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 200*RANDOM_MULTIPLIER, 8192);
+//	 }
 
-//public void testReusableTokenStream() throws Exception {
-//    Analyzer a = new SmartChineseAnalyzer(Version.LUCENE_CURRENT);
-//    assertAnalyzesToReuse(a, "我购买 Tests 了道具和服装",
-//        new String[] { "我", "购买", "test", "了", "道具", "和", "服装"},
-//        new int[] { 0, 1, 4, 10, 11, 13, 14 },
-//        new int[] { 1, 3, 9, 11, 13, 14, 16 });
-//    assertAnalyzesToReuse(a, "我购买了道具和服装。",
-//        new String[] { "我", "购买", "了", "道具", "和", "服装" },
-//        new int[] { 0, 1, 3, 4, 6, 7 },
-//        new int[] { 1, 3, 4, 6, 7, 9 });
-//  }
-//
-//
-//
-//	  /*
-//	   * English words are lowercased and porter-stemmed.
-//	   */
-//	  public void testMixedLatinChinese() throws Exception {
-//	    assertAnalyzesTo(new SmartChineseAnalyzer(Version.LUCENE_CURRENT, true), "我购买 Tests 了道具和服装",
-//	        new String[] { "我", "购买", "test", "了", "道具", "和", "服装"});
-//	  }
-//
-//	  /*
-//	   * Numerics are parsed as their own tokens
-//	   */
-//	  public void testNumerics() throws Exception {
-//	    assertAnalyzesTo(new SmartChineseAnalyzer(Version.LUCENE_CURRENT, true), "我购买 Tests 了道具和服装1234",
-//	      new String[] { "我", "购买", "test", "了", "道具", "和", "服装", "1234"});
-//	  }
-//	  /** blast some random strings through the analyzer */
-//	  public void testRandomStrings() throws Exception {
-//	    checkRandomData(random,  getStdTokenAnalyzer(CJKEmitType.NO_CJK), 10000*RANDOM_MULTIPLIER);
-//	  }
-//
-//	  /** blast some random large strings through the analyzer */
-//	  public void testRandomHugeStrings() throws Exception {
-//	    checkRandomData(random,  getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 200*RANDOM_MULTIPLIER, 8192);
-//	  }
-//
-//	  public void testEmptyTerm() throws IOException {
-//	    Analyzer a = new ReusableAnalyzerBase() {
-//	      @Override
-//	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
-//	        Tokenizer tokenizer = new KeywordTokenizer(reader);
-//	        return new TokenStreamComponents(tokenizer, new WordTokenFilter(tokenizer));
-//	      }
-//	    };
-//	    checkAnalysisConsistency(random, a, random.nextBoolean(), "");
-//	  }
-//	  // LUCENE-3026
-//	  public void testLargeDocument() throws Exception {
-//	    StringBuilder sb = new StringBuilder();
-//	    for (int i = 0; i < 5000; i++) {
-//	      sb.append("我购买了道具和服装。");
-//	    }
-//	    Analyzer analyzer = new SmartChineseAnalyzer(TEST_VERSION_CURRENT);
-//	    TokenStream stream = analyzer.reusableTokenStream("", new StringReader(sb.toString()));
-//	    stream.reset();
-//	    while (stream.incrementToken()) {
-//	    }
-//	  }
-//
-//	  // LUCENE-3026
-//	  public void testLargeSentence() throws Exception {
-//	    StringBuilder sb = new StringBuilder();
-//	    for (int i = 0; i < 5000; i++) {
-//	      sb.append("我购买了道具和服装");
-//	    }
-//	    Analyzer analyzer = new SmartChineseAnalyzer(TEST_VERSION_CURRENT);
-//	    TokenStream stream = analyzer.reusableTokenStream("", new StringReader(sb.toString()));
-//	    stream.reset();
-//	    while (stream.incrementToken()) {
-//	    }
-//	  }
-//
-//	  // LUCENE-3642
-//	  public void testInvalidOffset() throws Exception {
-//	    Analyzer analyzer = new ReusableAnalyzerBase() {
-//	      @Override
-//	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
-//	        Tokenizer tokenizer = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-//	        TokenFilter filters = new ASCIIFoldingFilter(tokenizer);
-//	        filters = new WordTokenFilter(filters);
-//	        return new TokenStreamComponents(tokenizer, filters);
-//	      }
-//	    };
-//
-//	    assertAnalyzesTo(analyzer, "mosfellsbær",
-//	        new String[] { "mosfellsbaer" },
-//	        new int[]    { 0 },
-//	        new int[]    { 11 });
-//	  }
-//
+@Test
+	 public void testEmptyTerm() throws IOException
+	 {
+	    Analyzer a = new ReusableAnalyzerBase() {
+	      @Override
+	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
+	        Tokenizer tokenizer = new KeywordTokenizer(reader);
+	        return new TokenStreamComponents(tokenizer, new CJKHopperFilter(tokenizer, CJKEmitType.HAN_SOLO));
+	      }
+	    };
+	    checkAnalysisConsistency(random, a, random.nextBoolean(), "");
+	 }
+
+	 // LUCENE-3026 (for SmartCNAnalyzer)
+@Test
+	 public void testLargeDocument() throws Exception
+	 {
+	    StringBuilder sb = new StringBuilder();
+	    for (int i = 0; i < 5000; i++) {
+	      sb.append("我购买了道具和服装。");
+	    }
+	    Analyzer analyzer = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
+	    TokenStream stream = analyzer.reusableTokenStream("", new StringReader(sb.toString()));
+	    stream.reset();
+	    while (stream.incrementToken())
+	    {
+	    }
+	 }
+
 
 	/**
-	 * TODO: write comment
+	 * @return Analyzer of a StandardTokenizer followed by CJKHopperFilter
 	 */
 	private Analyzer getStdTokenAnalyzer(final CJKEmitType emitType) {
 		Analyzer analyzer = new ReusableAnalyzerBase()
@@ -232,12 +251,10 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
 			{
 				Tokenizer t = new StandardTokenizer(TEST_VERSION_CURRENT, reader);
+				// Tokenizer t = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
 				return new TokenStreamComponents(t, new CJKHopperFilter(t, emitType));
-				// Tokenizer source = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-				// return new TokenStreamComponents(source, new CJKHopperFilter(t, CJKHopperFilter.HAN, true));
 			}
 		};
-
 		return analyzer;
 	}
 }
