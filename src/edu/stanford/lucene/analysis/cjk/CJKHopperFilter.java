@@ -60,6 +60,9 @@ public class CJKHopperFilter extends TokenFilter
 	/** true if we should emit tokens when Hiragana or Katakana script characters are present */
 	private final boolean emitIfJapanese;
 
+	/** true if we should emit tokens when Hangul script characters are present */
+	private final boolean emitIfHangul;
+
 	private boolean tokensHaveHan = false;
 	private boolean tokensHaveHiragana = false;
 	private boolean tokensHaveKatakana = false;
@@ -114,6 +117,7 @@ public class CJKHopperFilter extends TokenFilter
 		emitHangul = (flags & HANGUL) == 0 ? false : true;
 		this.emitIfNoCJK = emitNonCJK;
 		this.emitIfJapanese = false;
+		this.emitIfHangul = false;
 	}
 
 
@@ -126,11 +130,10 @@ public class CJKHopperFilter extends TokenFilter
 	 *            {@link CJKHopperFilter#HIRAGANA},
 	 *            {@link CJKHopperFilter#KATAKANA},
 	 *            {@link CJKHopperFilter#HANGUL}
-	 * @param emitNonCJK true if non-CJK script characters should also be
-	 *            output.
+	 * @param emitNonCJK true if non-CJK script characters should also be output.
 	 * @throws IOException
 	 */
-	public CJKHopperFilter(TokenStream in, int flags, boolean emitIfJapanese, boolean emitNonCJK) throws IOException
+	public CJKHopperFilter(TokenStream in, int flags, boolean emitIfHangul, boolean emitIfJapanese, boolean emitNonCJK) throws IOException
 	{
 		super(in);
 		emitHan = (flags & HAN) == 0 ? false : true;
@@ -139,6 +142,7 @@ public class CJKHopperFilter extends TokenFilter
 		emitHangul = (flags & HANGUL) == 0 ? false : true;
 		this.emitIfNoCJK = emitNonCJK;
 		this.emitIfJapanese = emitIfJapanese;
+		this.emitIfHangul = emitIfHangul;
 	}
 
 	@Override
@@ -158,15 +162,13 @@ public class CJKHopperFilter extends TokenFilter
 			restoreState(iterator.next());
 			String type = typeAtt.type();
 
-			if (tokensHaveHan && emitHan)
-
-			if (emitHan && tokensHaveHan)
-				return true;
-			if (emitHiragana && tokensHaveHiragana)
-				return true;
-			if (emitKatakana && tokensHaveKatakana)
-				return true;
-			if (emitHangul && tokensHaveHangul)
+//			if (emitHan && tokensHaveHan)
+//				return true;
+//			if (emitHiragana && tokensHaveHiragana)
+//				return true;
+//			if (emitKatakana && tokensHaveKatakana)
+//				return true;
+			if (emitIfHangul && tokensHaveHangul)
 				return true;
 			if (emitIfJapanese && (tokensHaveHiragana || tokensHaveKatakana))
 				return true;

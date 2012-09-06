@@ -44,7 +44,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	public void testNonCJKPassThru() throws Exception
 	{
 		assertAnalyzesTo(
-				getStdTokenAnalyzer(0x00, false, true),
+				getStdTokenAnalyzer(0x00, false, false, true),
 				"pass 多くの学生が me 試験に落ちた thru",
 				new String[] { "pass", "me", "thru" },
 				new int[] { 0, 5, 7 },   // startOffsets
@@ -62,12 +62,11 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	 * }
 	 */
 
-	// test Japanese scripts only
 @Test
 	public void testJapaneseEmitsIfHiraganaPresent() throws Exception
 	{
 		// another possible test string:   を知るための is hiragana except 知 which is kanji
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
 			"近世仮名遣い論の研究 -- chars 6, 8: い の are hiragana",
 			new String[] { "近", "世", "仮", "名", "遣", "い", "論", "の", "研", "究", "chars", "6", "8", "い", "の", "are", "hiragana" },
 			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 20, 23, 26, 28, 30, 34 },   // startOffsets
@@ -79,7 +78,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseEmitsIfKatakanaPresent() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
 			"マンガ is katakana",
 			new String[] { "マンガ", "is",  "katakana" },
 			new int[] { 0, 4, 7 },   // startOffsets
@@ -91,7 +90,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseEmitsIfBothPresent() throws Exception
 	{
-		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false),
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, false, true, false),
 			"日本マンガを知るためのブック・ガイド",
 			new String[] { "日", "本", "マンガ", "を", "知", "る", "た", "め", "の", "ブック", "ガイド" },
 			new int[] { 0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 15 },   // startOffsets
@@ -103,23 +102,44 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 @Test
 	public void testJapaneseNothingOutIfScriptsAbsent() throws Exception
 	{
-		Analyzer a = getStdTokenAnalyzer(0x00, true, false);
+		Analyzer a = getStdTokenAnalyzer(0x00, false, true, false);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
-//		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false),
-//			"南滿洲鐵道株式會社 traditional han",
-//			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
-//			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 23 },   // startOffsets
-//			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 26 },  // endOffsets
-//			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
-//			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
 	}
 
 
-	// test Korean scripts only
+@Test
+	public void testEmitIfHangulPresent() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+			"한국경제 hangul",
+			new String[] { "한국경제", "hangul" },
+			new int[] { 0, 5 },   // startOffsets
+			new int[] { 4, 11 },  // endOffsets
+			new String[] { "<HANGUL>", "<ALPHANUM>" },
+			new int[] { 1, 1 });  // positionIncrements
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+			"한국사 의 壇君 인식 hangul and hancha",
+			new String[] { "한국사", "의", "壇", "君", "인식", "hangul", "and", "hancha" },
+			new int[] { 0, 4, 6, 7, 9, 12, 19, 23 },   // startOffsets
+			new int[] { 3, 5, 7, 8, 11, 18, 22, 29 },  // endOffsets
+			new String[] { "<HANGUL>", "<HANGUL>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<HANGUL>", "<ALPHANUM>", "<ALPHANUM>", "<ALPHANUM>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+	}
 
 	// test Han only
+@Test
+	public void testTraditionalHanOnly() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(0x00, true, false, false),
+			"南滿洲鐵道株式會社 traditional han",
+			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
+			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 23 },   // startOffsets
+			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 26 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+	}
 
 	// test more complex variants
 
@@ -219,7 +239,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	 *            {@link CJKHopperFilter#HANGUL}
 	 * @param emitIfNoCJK true if non-CJK script characters should also be output.
 	 */
-	private Analyzer getStdTokenAnalyzer(final int flags, final boolean emitIfJapanese, final boolean emitIfNoCJK) {
+	private Analyzer getStdTokenAnalyzer(final int flags, final boolean emitIfHangul, final boolean emitIfJapanese, final boolean emitIfNoCJK) {
 		Analyzer analyzer = new ReusableAnalyzerBase()
 		{
 			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
@@ -227,7 +247,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 				Tokenizer t = new StandardTokenizer(TEST_VERSION_CURRENT, reader);
 				try
 				{
-					return new TokenStreamComponents(t, new CJKHopperFilter(t, flags, emitIfJapanese, emitIfNoCJK));
+					return new TokenStreamComponents(t, new CJKHopperFilter(t, flags, emitIfHangul, emitIfJapanese, emitIfNoCJK));
 				}
 				catch (IOException e) { e.printStackTrace(); }
 				return null;
