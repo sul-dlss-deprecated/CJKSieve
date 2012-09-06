@@ -6,7 +6,7 @@ import java.util.*;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.*;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.util.AttributeSource;
 
 /**
@@ -54,14 +54,20 @@ public class CJKHopperFilter extends TokenFilter
 	private final boolean emitKatakana;
 	private final boolean emitHangul;
 
-	// true if we should emit non CJK script characters
-	private final boolean emitNonCJK;
+	/** true if we should emit tokens when no CJK script characters are present */
+	private final boolean emitIfNoCJK;
 
-	private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
+	/** true if we should emit tokens when Hiragana or Katakana script characters are present */
+	private final boolean emitIfJapanese;
+
+	private boolean tokensHaveHan = false;
+	private boolean tokensHaveHiragana = false;
+	private boolean tokensHaveKatakana = false;
+	private boolean tokensHaveHangul = false;
+
 	private final TypeAttribute typeAtt = addAttribute(TypeAttribute.class);
-	private final OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
-	private final PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
 
+	// used for token cache implementation
 	private List<AttributeSource.State> cache = null;
 	private Iterator<AttributeSource.State> iterator = null;
 	private AttributeSource.State finalState;
@@ -106,81 +112,40 @@ public class CJKHopperFilter extends TokenFilter
 		emitHiragana = (flags & HIRAGANA) == 0 ? false : true;
 		emitKatakana = (flags & KATAKANA) == 0 ? false : true;
 		emitHangul = (flags & HANGUL) == 0 ? false : true;
-		this.emitNonCJK = emitNonCJK;
-//		readTokenStreamThenReset();
+		this.emitIfNoCJK = emitNonCJK;
+		this.emitIfJapanese = false;
 	}
 
 
-	private boolean haveHan = false;
-	private boolean haveHiragana = false;
-	private boolean haveKatakana = false;
-	private boolean haveHangul = false;
-	private boolean haveNonCJK = false;
-
-	private void readTokenStreamThenReset() throws IOException
+	/**
+	 * Create a new CJKHopperFilter, specifying which writing systems should be
+	 * emitted,
+	 * and whether or not non-CJK scripts should also be output.
+	 *
+	 * @param flags OR'ed set from {@link CJKHopperFilter#HAN},
+	 *            {@link CJKHopperFilter#HIRAGANA},
+	 *            {@link CJKHopperFilter#KATAKANA},
+	 *            {@link CJKHopperFilter#HANGUL}
+	 * @param emitNonCJK true if non-CJK script characters should also be
+	 *            output.
+	 * @throws IOException
+	 */
+	public CJKHopperFilter(TokenStream in, int flags, boolean emitIfJapanese, boolean emitNonCJK) throws IOException
 	{
-		State beforeState = input.captureState();
-		while (input.incrementToken())
-		{
-			String type = typeAtt.type();
-			if (type == HAN_TYPE)
-				haveHan = true;
-			else if (type == HIRAGANA_TYPE)
-				haveHiragana = true;
-			else if (type == KATAKANA_TYPE)
-				haveKatakana = true;
-			else if (type == HANGUL_TYPE)
-				haveHangul = true;
-			else
-				haveNonCJK = true;
-		}
-		reset();
-//		input.reset();
-		input.restoreState(beforeState);
+		super(in);
+		emitHan = (flags & HAN) == 0 ? false : true;
+		emitHiragana = (flags & HIRAGANA) == 0 ? false : true;
+		emitKatakana = (flags & KATAKANA) == 0 ? false : true;
+		emitHangul = (flags & HANGUL) == 0 ? false : true;
+		this.emitIfNoCJK = emitNonCJK;
+		this.emitIfJapanese = emitIfJapanese;
 	}
-
-/*
-	@Override
-	public boolean incrementToken() throws IOException
-	{
-	    if (input.incrementToken())
-	    {
-		    int termLen = termAtt.length();
-		    String type = typeAtt.type();
-		    int startOffset = offsetAtt.startOffset();
-		    int endOffset = offsetAtt.endOffset();
-		    int posIncr = posIncrAtt.getPositionIncrement();
-
-//		    clearAttributes();
-//		    termAtt.setLength();
-//	    	offsetAtt.setOffset(startOffset[index], endOffset[index+1]);
-//	 	   typeAtt.setType(typeAtt.type());
-//	    	posIncrAtt.setPositionIncrement(0);
-
-
-		    if (emitHan && haveHan)
-				return true;
-			if (emitHiragana && haveHiragana)
-				return true;
-			if (emitKatakana && haveKatakana)
-				return true;
-			if (emitHangul && haveHangul)
-				return true;
-			if (emitNonCJK && haveNonCJK)
-				return true;
-
-			return false;
-	    }
-	    else
-	    	return false;
-	}
-*/
-
 
 	@Override
 	public final boolean incrementToken() throws IOException
 	{
-		if (cache == null) {
+		if (cache == null)
+		{
 			// fill cache lazily
 			cache = new LinkedList<AttributeSource.State>();
 			fillCache();
@@ -191,20 +156,24 @@ public class CJKHopperFilter extends TokenFilter
 		{
 			// Since the TokenFilter can be reset, the tokens need to be preserved as immutable.
 			restoreState(iterator.next());
+			String type = typeAtt.type();
 
-			if (emitHan && haveHan)
+			if (tokensHaveHan && emitHan)
+
+			if (emitHan && tokensHaveHan)
 				return true;
-			if (emitHiragana && haveHiragana)
+			if (emitHiragana && tokensHaveHiragana)
 				return true;
-			if (emitKatakana && haveKatakana)
+			if (emitKatakana && tokensHaveKatakana)
 				return true;
-			if (emitHangul && haveHangul)
+			if (emitHangul && tokensHaveHangul)
 				return true;
-			if (emitNonCJK && haveNonCJK)
+			if (emitIfJapanese && (tokensHaveHiragana || tokensHaveKatakana))
+				return true;
+			if (emitIfNoCJK && !tokensHaveHan && !tokensHaveHangul && !tokensHaveHiragana && !tokensHaveKatakana)
 				return true;
 
 			return false;
-
 		}
 
 		// else the cache is exhausted, return false
@@ -214,34 +183,31 @@ public class CJKHopperFilter extends TokenFilter
 	@Override
 	public final void end() throws IOException
 	{
-		if (finalState != null) {
+		if (finalState != null)
 			restoreState(finalState);
-		}
 	}
 
 	@Override
 	public void reset() throws IOException
 	{
-		if(cache != null) {
+		if (cache != null)
 			iterator = cache.iterator();
-		}
 	}
 
 	private void fillCache() throws IOException
 	{
-		while(input.incrementToken()) {
+		while(input.incrementToken())
+		{
 			cache.add(captureState());
 			String type = typeAtt.type();
 			if (type == HAN_TYPE)
-				haveHan = true;
+				tokensHaveHan = true;
 			else if (type == HIRAGANA_TYPE)
-				haveHiragana = true;
+				tokensHaveHiragana = true;
 			else if (type == KATAKANA_TYPE)
-				haveKatakana = true;
+				tokensHaveKatakana = true;
 			else if (type == HANGUL_TYPE)
-				haveHangul = true;
-			else
-				haveNonCJK = true;
+				tokensHaveHangul = true;
 		}
 		// capture final state
 		input.end();
