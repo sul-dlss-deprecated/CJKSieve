@@ -1,6 +1,5 @@
 package edu.stanford.solr.analysis;
 
-import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,8 +10,9 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.junit.Test;
 
 /**
- * @author Naomi Dushay
+ * Simple tests for CJKHopperFilterFactory.
  *
+ * @author Naomi Dushay
  */
 public class TestCJKHopperFilterFactory extends BaseTokenStreamTestCase
 {
@@ -23,37 +23,41 @@ public class TestCJKHopperFilterFactory extends BaseTokenStreamTestCase
 @Test
     public void testJapanese() throws Exception
 	{
-		Reader reader = new StringReader("マンガ is katakana");
-		TokenStream stream = getCJKHopperFilterFactory("japanese").create(new StandardTokenizer(TEST_VERSION_CURRENT, reader));
+		CJKHopperFilterFactory f = getCJKHopperFilterFactory("japanese");
+		TokenStream stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("マンガ is katakana")));
 		assertTokenStreamContents(stream, new String[] { "マンガ", "is", "katakana" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("한국경제 hangul only")));
+		assertTokenStreamContents(stream, new String[] {});
 	}
 
 @Test
 	public void testHanSolo() throws Exception
 	{
-		Reader reader = new StringReader("壇君");
-		TokenStream stream = getCJKHopperFilterFactory("han_solo").create(new StandardTokenizer(TEST_VERSION_CURRENT, reader));
-		assertTokenStreamContents(stream,
-		    new String[] { "壇", "君" });
+		CJKHopperFilterFactory f = getCJKHopperFilterFactory("han_solo");
+		TokenStream stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("壇君")));
+		assertTokenStreamContents(stream, new String[] { "壇", "君" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("한국경제 hangul only")));
+		assertTokenStreamContents(stream, new String[] {});
 	}
 
 @Test
 	public void testHangul() throws Exception
 	{
-		Reader reader = new StringReader("한국경제 hangul only");
-		TokenStream stream = getCJKHopperFilterFactory("hangul").create(new StandardTokenizer(TEST_VERSION_CURRENT, reader));
+		CJKHopperFilterFactory f = getCJKHopperFilterFactory("hangul");
+		TokenStream stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("한국경제 hangul only")));
 		assertTokenStreamContents(stream, new String[] { "한국경제", "hangul", "only" });
-
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("マンガ is katakana")));
+		assertTokenStreamContents(stream, new String[] {});
 	}
 
 @Test
 	public void testNoCJK() throws Exception
 	{
-		Reader reader = new StringReader("no cjk");
-		TokenStream stream = getCJKHopperFilterFactory("no_cjk").create(new StandardTokenizer(TEST_VERSION_CURRENT, reader));
-		assertTokenStreamContents(stream,
-		    new String[] { "no", "cjk" });
-
+		CJKHopperFilterFactory f = getCJKHopperFilterFactory("no_cjk");
+		TokenStream stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("no cjk")));
+		assertTokenStreamContents(stream, new String[] { "no", "cjk" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("マンガ is katakana")));
+		assertTokenStreamContents(stream, new String[] {});
 	}
 
 @Test
