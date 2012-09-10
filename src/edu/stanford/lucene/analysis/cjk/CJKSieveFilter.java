@@ -33,8 +33,11 @@ import java.util.*;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.util.AttributeSource;
+
+import com.ibm.icu.lang.UScript;
 
 /**
  * Emits tokens that are generated from StandardTokenizer or ICUTokenizer,
@@ -69,6 +72,7 @@ public class CJKSieveFilter extends TokenFilter
 	private boolean tokensHaveHangul = false;
 
 	private final TypeAttribute typeAtt = addAttribute(TypeAttribute.class);
+	private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
 
 	// used for token cache implementation
 	private List<AttributeSource.State> cache = null;
@@ -157,10 +161,60 @@ public class CJKSieveFilter extends TokenFilter
 				tokensHaveKatakana = true;
 			else if (type == HANGUL_TYPE)
 				tokensHaveHangul = true;
+			else if (!haveCJKTokens())
+				// we have to do it the hard way
+				readCharsForScript(termAtt.toString());
 		}
 		// capture final state
 		input.end();
 		finalState = captureState();
+	}
+
+	private boolean haveCJKTokens()
+	{
+		if (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana)
+			return true;
+		return false;
+	}
+
+
+	/** linear fast-path for basic latin case */
+	private static final int basicLatin[] = new int[128];
+
+	static {
+	  for (int i = 0; i < basicLatin.length; i++)
+	    basicLatin[i] = UScript.getScript(i);
+	}
+
+	/** fast version of UScript.getScript(). Basic Latin is an array lookup */
+	private static int getScript(int codepoint) {
+	  if (0 <= codepoint && codepoint < basicLatin.length)
+	    return basicLatin[codepoint];
+	  else
+	    return UScript.getScript(codepoint);
+	}
+
+	private void readCharsForScript(String term)
+	{
+		for (int i = 0; i < term.length(); i++)
+		{
+			int cp = term.codePointAt(i);
+			int script = getScript(cp);
+			switch (script) {
+				case UScript.HANGUL:
+					tokensHaveHangul = true;
+					break;
+				case UScript.HIRAGANA:
+					tokensHaveHiragana = true;
+					break;
+				case UScript.KATAKANA:
+					tokensHaveKatakana = true;
+					break;
+				case UScript.HAN:
+					tokensHaveHan = true;
+					break;
+			}
+		}
 	}
 
 }

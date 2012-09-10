@@ -283,6 +283,7 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 			}
 		};
 
+		assertAnalyzesTo(a, "한국경제 hangul", new String[] { "한국경제", "hangul" });
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("仏教学 乱 禅 modern kanji")), new String[] {});
@@ -290,6 +291,35 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+	}
+
+@Test
+	public void testReadCharsForType() throws Exception
+	{
+		Analyzer hangul = getWhitespaceTokenAnalyzer(CJKEmitType.HANGUL);
+		assertAnalyzesTo(hangul, "한국경제 hangul", new String[] { "한국경제", "hangul" });
+		assertAnalyzesTo(hangul, "を知るための is hiragana except 知 which is kanji", new String[] {});
+		assertAnalyzesTo(hangul, "No CJK here ... Des mot clés À LA CHAÎNE À Á ", new String[] {});
+
+		Analyzer japanese = getWhitespaceTokenAnalyzer(CJKEmitType.JAPANESE);
+		assertAnalyzesTo(japanese, "マンガ is katakana", new String[] {"マンガ", "is", "katakana"});
+		assertAnalyzesTo(japanese, "近世仮名遣い論の研究 has hiragana", new String[] {"近世仮名遣い論の研究", "has", "hiragana"});
+		assertAnalyzesTo(japanese, "한국경제 hangul", new String[] {});
+		assertAnalyzesTo(japanese, "No CJK here ... Des mot clés À LA CHAÎNE À Á ", new String[] {});
+
+		Analyzer han_solo = getWhitespaceTokenAnalyzer(CJKEmitType.HAN_SOLO);
+		assertAnalyzesTo(han_solo, "南滿洲鐵道株式會社 traditional han only", new String[] {"南滿洲鐵道株式會社", "traditional", "han", "only"});
+		assertAnalyzesTo(han_solo, "Simplified  中国地方志集成", new String[] {"Simplified", "中国地方志集成"});
+		assertAnalyzesTo(han_solo, "を知るための is hiragana except 知 which is kanji", new String[] {});
+		assertAnalyzesTo(han_solo, "한국경제 hangul", new String[] {});
+		assertAnalyzesTo(han_solo, "No CJK here ... Des mot clés À LA CHAÎNE À Á ", new String[] {});
+
+		Analyzer no_cjk = getWhitespaceTokenAnalyzer(CJKEmitType.NO_CJK);
+		assertAnalyzesTo(no_cjk, "No CJK here", new String[] {"No", "CJK", "here"});
+		assertAnalyzesTo(no_cjk, "南滿洲鐵道株式會社 traditional han only", new String[] {});
+		assertAnalyzesTo(no_cjk, "Simplified  中国地方志集成", new String[] {});
+		assertAnalyzesTo(no_cjk, "を知るための is hiragana except 知 which is kanji", new String[] {});
+		assertAnalyzesTo(no_cjk, "한국경제 hangul", new String[] {});
 	}
 
 	/**
@@ -308,4 +338,23 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		};
 		return analyzer;
 	}
+
+
+	/**
+	 * @return Analyzer of a WhitespaceTokenizer followed by CJKSieveFilter
+	 */
+	@Ignore
+	private Analyzer getWhitespaceTokenAnalyzer(final CJKEmitType emitType) {
+		Analyzer analyzer = new ReusableAnalyzerBase()
+		{
+			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
+			{
+				Tokenizer t = new WhitespaceTokenizer(TEST_VERSION_CURRENT, reader);
+				// Tokenizer t = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
+				return new TokenStreamComponents(t, new CJKSieveFilter(t, emitType));
+			}
+		};
+		return analyzer;
+	}
+
 }
