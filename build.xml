@@ -4,10 +4,8 @@
 	<property file="build.properties" />
 
 	<!-- Continuous Integration properties -->
-	<property name="cobertura.jar.dir" location="${test.lib.dir}" />
-	<property name="cobertura.core.data.file" value="${core.instr.dir}/cobertura.ser" />
-	<property name="cobertura.site.data.file" value="${site.instr.dir}/cobertura.ser" />
-
+	<property name="cobertura.jar.dir" location="${test.lib.dir}/cobertura-1.9.4.1" />
+	<property name="cobertura.data.file" value="${instr.dir}/cobertura.ser" />
 
 	<target name="clean" description="remove the build directories">
 		<delete dir="${build.dir}" />
@@ -35,7 +33,7 @@
 	</target>
 
 	<target name="jar" depends="compile" description="Build custom jar file" >
-		<jar destfile="${build.dir}/CJKSieve.jar">
+		<jar destfile="${dist.dir}/CJKSieve.jar">
 			<fileset dir="${build.dir}" includes="**/*.class"/>
 			<fileset dir="${src.dir}" includes="**/*.java"/>
 		</jar>
@@ -165,10 +163,8 @@
 		    <doctitle><![CDATA[<h1>CJKSieve for Lucene/Solr API</h1>]]></doctitle>
 				<package name="edu.stanford.*" />
 	    	<group title="Packages" packages="edu.stanford.lucene.analysis,edu.stanford.solr.analysis"/>
-	    	<group title="Test Classes" packages="edu.stanford.lucene.analysis.*Test*,,edu.stanford.solr.analysis.*Test*"/>
+	    	<group title="Test Classes" packages="edu.stanford.lucene.analysis.*Test*,edu.stanford.solr.analysis.*Test*"/>
 	    	<link href="http://docs.oracle.com/javase/6/docs/api/" />
-				<link href="http://lucene.apache.org/solr/api" />
-				<link href="http://lucene.apache.org/java/api" />
 		  </javadoc>
 	</target>
 
