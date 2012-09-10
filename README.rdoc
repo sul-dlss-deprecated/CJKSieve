@@ -31,7 +31,7 @@ If and only if you detect Hiragana or Katakana script, you want to use Japanese 
  <fieldType name="text_ja" class="solr.TextField">
    <analyzer>
      <tokenizer class="solr.JapaneseTokenizerFactory" mode="search"/>
-     <filter class="solr.CJKSieveFilterFactory" emitIf="japanese"/>
+     <filter class="edu.stanford.solr.analysis.CJKSieveFilterFactory" emitIf="japanese"/>
      <filter class="solr.JapaneseBaseFormFilterFactory"/>
      <filter class="solr.JapanesePartOfSpeechStopFilterFactory" tags="lang/stoptags_ja.txt" enablePositionIncrements="true"/>
      <filter class="solr.ICUFoldingFilterFactory"/>
@@ -45,7 +45,7 @@ If and only if you detect Hangul script, you want to Bigram:
  <fieldType name="text_ko" class="solr.TextField">
    <analyzer>
      <tokenizer class="solr.StandardTokenizerFactory"/>
-     <filter class="solr.CJKSieveFilterFactory" emitIf="hangul"/>
+     <filter class="edu.stanford.solr.analysis.CJKSieveFilterFactory" emitIf="hangul"/>
      <filter class="solr.ICUFoldingFilterFactory"/>
      <filter class="solr.LowerCaseFilterFactory"/>
      <filter class="solr.CJKBigramFilterFactory"

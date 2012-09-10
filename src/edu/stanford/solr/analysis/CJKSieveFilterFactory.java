@@ -44,7 +44,7 @@ import edu.stanford.lucene.analysis.cjk.CJKEmitType;
  * &lt;fieldType name="text_ja" class="solr.TextField"&gt;
  *   &lt;analyzer&gt;
  *     &lt;tokenizer class="solr.JapaneseTokenizerFactory" mode="search"/&gt;
- *     &lt;filter class="solr.CJKSieveFilterFactory" emitIf="japanese"/&gt;
+ *     &lt;filter class="edu.stanford.solr.analysis.CJKSieveFilterFactory" emitIf="japanese"/&gt;
  *     &lt;filter class="solr.JapaneseBaseFormFilterFactory"/&gt;
  *     &lt;filter class="solr.JapanesePartOfSpeechStopFilterFactory" tags="lang/stoptags_ja.txt" enablePositionIncrements="true"/&gt;
  *     &lt;filter class="solr.ICUFoldingFilterFactory"/&gt;
@@ -58,7 +58,7 @@ import edu.stanford.lucene.analysis.cjk.CJKEmitType;
  * &lt;fieldType name="text_ko" class="solr.TextField"&gt;
  *   &lt;analyzer&gt;
  *     &lt;tokenizer class="solr.StandardTokenizerFactory"/&gt;
- *     &lt;filter class="solr.CJKSieveFilterFactory" emitIf="hangul"/&gt;
+ *     &lt;filter class="edu.stanford.solr.analysis.CJKSieveFilterFactory" emitIf="hangul"/&gt;
  *     &lt;filter class="solr.ICUFoldingFilterFactory"/&gt;
  *     &lt;filter class="solr.LowerCaseFilterFactory"/&gt;
  *     &lt;filter class="solr.CJKBigramFilterFactory"
