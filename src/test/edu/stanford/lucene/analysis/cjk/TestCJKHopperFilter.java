@@ -3,6 +3,7 @@ package edu.stanford.lucene.analysis.cjk;
 import java.io.*;
 
 import org.apache.lucene.analysis.*;
+import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.junit.Test;
 
@@ -241,6 +242,27 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	    }
 	 }
 
+@Test
+	public void testWithICUTokenizer() throws Exception
+	{
+		Analyzer a = new ReusableAnalyzerBase()
+		{
+			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
+			{
+				Tokenizer t = new ICUTokenizer(reader);
+				// Tokenizer t = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
+				return new TokenStreamComponents(t, new CJKHopperFilter(t, CJKEmitType.HANGUL));
+			}
+		};
+
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("南滿洲鐵道株式會社 traditional han only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("Simplified  中国地方志集成")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("仏教学 乱 禅 modern kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+	}
 
 	/**
 	 * @return Analyzer of a StandardTokenizer followed by CJKHopperFilter
