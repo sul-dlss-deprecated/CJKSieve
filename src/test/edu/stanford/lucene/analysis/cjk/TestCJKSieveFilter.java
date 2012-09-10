@@ -10,7 +10,7 @@ import org.junit.Test;
 /**
  * @author Naomi Dushay
  */
-public class TestCJKHopperFilter extends BaseTokenStreamTestCase
+public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 {
     static {
     	System.setProperty("tests.asserts.gracious", "true");
@@ -220,7 +220,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	      @Override
 	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
 	        Tokenizer tokenizer = new KeywordTokenizer(reader);
-	        return new TokenStreamComponents(tokenizer, new CJKHopperFilter(tokenizer, CJKEmitType.HAN_SOLO));
+	        return new TokenStreamComponents(tokenizer, new CJKSieveFilter(tokenizer, CJKEmitType.HAN_SOLO));
 	      }
 	    };
 	    checkAnalysisConsistency(random, a, random.nextBoolean(), "");
@@ -251,7 +251,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 			{
 				Tokenizer t = new ICUTokenizer(reader);
 				// Tokenizer t = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-				return new TokenStreamComponents(t, new CJKHopperFilter(t, CJKEmitType.HANGUL));
+				return new TokenStreamComponents(t, new CJKSieveFilter(t, CJKEmitType.HANGUL));
 			}
 		};
 
@@ -265,7 +265,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 	}
 
 	/**
-	 * @return Analyzer of a StandardTokenizer followed by CJKHopperFilter
+	 * @return Analyzer of a StandardTokenizer followed by CJKSieveFilter
 	 */
 	private Analyzer getStdTokenAnalyzer(final CJKEmitType emitType) {
 		Analyzer analyzer = new ReusableAnalyzerBase()
@@ -274,7 +274,7 @@ public class TestCJKHopperFilter extends BaseTokenStreamTestCase
 			{
 				Tokenizer t = new StandardTokenizer(TEST_VERSION_CURRENT, reader);
 				// Tokenizer t = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-				return new TokenStreamComponents(t, new CJKHopperFilter(t, emitType));
+				return new TokenStreamComponents(t, new CJKSieveFilter(t, emitType));
 			}
 		};
 		return analyzer;

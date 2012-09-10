@@ -5,11 +5,11 @@ import java.util.Map;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.solr.analysis.BaseTokenFilterFactory;
 
-import edu.stanford.lucene.analysis.cjk.CJKHopperFilter;
+import edu.stanford.lucene.analysis.cjk.CJKSieveFilter;
 import edu.stanford.lucene.analysis.cjk.CJKEmitType;
 
 /**
- * Factory for {@link CJKHopperFilter}.
+ * Factory for {@link CJKSieveFilter}.
  *
  * Example 1: IFF you detect Hiragana or Katakana script, you want to use
  *  Japanese morphological analyzer:
@@ -17,7 +17,7 @@ import edu.stanford.lucene.analysis.cjk.CJKEmitType;
  * &lt;fieldType name="text_ja" class="solr.TextField"&gt;
  *   &lt;analyzer&gt;
  *     &lt;tokenizer class="solr.JapaneseTokenizerFactory" mode="search"/&gt;
- *     &lt;filter class="solr.CJKHopperFilterFactory" emitIf="japanese"/&gt;
+ *     &lt;filter class="solr.CJKSieveFilterFactory" emitIf="japanese"/&gt;
  *     &lt;filter class="solr.JapaneseBaseFormFilterFactory"/&gt;
  *     &lt;filter class="solr.JapanesePartOfSpeechStopFilterFactory" tags="lang/stoptags_ja.txt" enablePositionIncrements="true"/&gt;
  *     &lt;filter class="solr.ICUFoldingFilterFactory"/&gt;
@@ -31,7 +31,7 @@ import edu.stanford.lucene.analysis.cjk.CJKEmitType;
  * &lt;fieldType name="text_ko" class="solr.TextField"&gt;
  *   &lt;analyzer&gt;
  *     &lt;tokenizer class="solr.StandardTokenizerFactory"/&gt;
- *     &lt;filter class="solr.CJKHopperFilterFactory" emitIf="hangul"/&gt;
+ *     &lt;filter class="solr.CJKSieveFilterFactory" emitIf="hangul"/&gt;
  *     &lt;filter class="solr.ICUFoldingFilterFactory"/&gt;
  *     &lt;filter class="solr.LowerCaseFilterFactory"/&gt;
  *     &lt;filter class="solr.CJKBigramFilterFactory"
@@ -43,7 +43,7 @@ import edu.stanford.lucene.analysis.cjk.CJKEmitType;
  * @author Naomi Dushay
  *
  */
-public class CJKHopperFilterFactory extends BaseTokenFilterFactory
+public class CJKSieveFilterFactory extends BaseTokenFilterFactory
 {
 	CJKEmitType emitType;
 
@@ -54,7 +54,7 @@ public class CJKHopperFilterFactory extends BaseTokenFilterFactory
 
 	    String emitIfStr = args.get("emitIf");
 	    if (emitIfStr == null)
-	      throw new RuntimeException("Configuration Error: missing parameter 'emitIf' for CJKHopperFilterFactory (must be one of:  japanese, hangul, han_solo, no_cjk");
+	      throw new RuntimeException("Configuration Error: missing parameter 'emitIf' for CJKSieveFilterFactory (must be one of:  japanese, hangul, han_solo, no_cjk");
 
 	    if (emitIfStr.equals("japanese"))
 	      emitType = CJKEmitType.JAPANESE;
@@ -65,10 +65,10 @@ public class CJKHopperFilterFactory extends BaseTokenFilterFactory
 	    else if (emitIfStr.equals("no_cjk"))
 	      emitType = CJKEmitType.NO_CJK;
 	    else
-	      throw new RuntimeException("Configuration Error: parameter 'emitIf' for CJKHopperFilterFactory must be one of:  japanese, hangul, han_solo, no_cjk");
+	      throw new RuntimeException("Configuration Error: parameter 'emitIf' for CJKSieveFilterFactory must be one of:  japanese, hangul, han_solo, no_cjk");
 	  }
 
 	  public TokenStream create(TokenStream input) {
-	    return new CJKHopperFilter(input, emitType);
+	    return new CJKSieveFilter(input, emitType);
 	  }
 }

@@ -25,7 +25,7 @@ import org.apache.lucene.util.AttributeSource;
  * @author Naomi Dushay
  *
  */
-public class CJKHopperFilter extends TokenFilter
+public class CJKSieveFilter extends TokenFilter
 {
 	// the CJK token types from StandardTokenizer
 	private static final String HAN_TYPE = StandardTokenizer.TOKEN_TYPES[StandardTokenizer.IDEOGRAPHIC];
@@ -49,11 +49,11 @@ public class CJKHopperFilter extends TokenFilter
 	private AttributeSource.State finalState;
 
 	/**
-	 * Create a new CJKHopperFilter, emitting tokens per emitType
+	 * Create a new CJKSieveFilter, emitting tokens per emitType
 	 * @param in
 	 * @param emitType from {@link CJKEmitType},
 	 */
-	public CJKHopperFilter(TokenStream in, CJKEmitType emitType)
+	public CJKSieveFilter(TokenStream in, CJKEmitType emitType)
 	{
 		super(in);
 		this.emitType = emitType;

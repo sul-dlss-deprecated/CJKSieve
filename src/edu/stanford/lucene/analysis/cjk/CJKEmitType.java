@@ -1,7 +1,7 @@
 package edu.stanford.lucene.analysis.cjk;
 
 /**
- * CJKHopper emit types
+ * CJKSieve emit types
  * @author - Naomi Dushay
  */
 public enum CJKEmitType
