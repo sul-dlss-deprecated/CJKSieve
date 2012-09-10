@@ -5,7 +5,7 @@ import java.io.*;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.junit.Test;
+import org.junit.*;
 
 /**
  * @author Naomi Dushay
@@ -217,7 +217,7 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 	 public void testEmptyTerm() throws IOException
 	 {
 	    Analyzer a = new ReusableAnalyzerBase() {
-	      @Override
+	      @Override @Ignore
 	      protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
 	        Tokenizer tokenizer = new KeywordTokenizer(reader);
 	        return new TokenStreamComponents(tokenizer, new CJKSieveFilter(tokenizer, CJKEmitType.HAN_SOLO));
@@ -247,6 +247,7 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 	{
 		Analyzer a = new ReusableAnalyzerBase()
 		{
+			@Ignore
 			protected TokenStreamComponents createComponents(String fieldName, Reader reader)
 			{
 				Tokenizer t = new ICUTokenizer(reader);
@@ -267,6 +268,7 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 	/**
 	 * @return Analyzer of a StandardTokenizer followed by CJKSieveFilter
 	 */
+	@Ignore
 	private Analyzer getStdTokenAnalyzer(final CJKEmitType emitType) {
 		Analyzer analyzer = new ReusableAnalyzerBase()
 		{
