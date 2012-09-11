@@ -118,7 +118,7 @@ public class CJKSieveFilter extends TokenFilter
 					break;
 				case HAN_SOLO:
 					if (tokensHaveHan &&
-							! (tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana))
+							!tokensHaveHangul && !tokensHaveHiragana && !tokensHaveKatakana)
 						return true;
 					break;
 				case NO_CJK:
@@ -161,7 +161,7 @@ public class CJKSieveFilter extends TokenFilter
 				tokensHaveKatakana = true;
 			else if (type == HANGUL_TYPE)
 				tokensHaveHangul = true;
-			else if (!haveCJKTokens())
+			else
 				// we have to do it the hard way
 				readCharsForScript(termAtt.toString());
 		}
@@ -169,14 +169,6 @@ public class CJKSieveFilter extends TokenFilter
 		input.end();
 		finalState = captureState();
 	}
-
-	private boolean haveCJKTokens()
-	{
-		if (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana)
-			return true;
-		return false;
-	}
-
 
 	/** linear fast-path for basic latin case */
 	private static final int basicLatin[] = new int[128];

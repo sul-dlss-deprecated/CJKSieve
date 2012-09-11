@@ -166,17 +166,16 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 @Test
 	public void testHanSoloDoesNotEmitIfHanAbsent() throws Exception
 	{
-		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HANGUL);
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
-// FIXME:  this doesn't pass - why?
-//		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제의 hangul only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제의 hangul only")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
 	}
 
 @Test
 	public void testHanSoloDoesNotEmitIfOtherPresent() throws Exception
 	{
-		Analyzer a = getStdTokenAnalyzer(CJKEmitType.NO_CJK);
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("don't pass 多くの学生が me 試験に落ちた thru")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
@@ -304,6 +303,7 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		Analyzer japanese = getWhitespaceTokenAnalyzer(CJKEmitType.JAPANESE);
 		assertAnalyzesTo(japanese, "マンガ is katakana", new String[] {"マンガ", "is", "katakana"});
 		assertAnalyzesTo(japanese, "近世仮名遣い論の研究 has hiragana", new String[] {"近世仮名遣い論の研究", "has", "hiragana"});
+		assertAnalyzesTo(japanese, "日本マンガを知るための", new String[] {"日本マンガを知るための"});
 		assertAnalyzesTo(japanese, "한국경제 hangul", new String[] {});
 		assertAnalyzesTo(japanese, "No CJK here ... Des mot clés À LA CHAÎNE À Á ", new String[] {});
 
