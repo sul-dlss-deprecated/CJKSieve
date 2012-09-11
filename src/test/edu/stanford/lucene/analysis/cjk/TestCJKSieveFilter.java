@@ -30,6 +30,8 @@ package edu.stanford.lucene.analysis.cjk;
 import java.io.*;
 
 import org.apache.lucene.analysis.*;
+import org.apache.lucene.analysis.ReusableAnalyzerBase.TokenStreamComponents;
+import org.apache.lucene.analysis.cjk.CJKWidthFilter;
 import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.junit.*;
@@ -210,34 +212,31 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국사 의 壇君 인식 hangul and hancha")), new String[] {});
 	}
 
-//FIXME:  fails - thread safety issues for cache?
-//@Test
-//	public void testReusableTokenStream() throws Exception
-//	{
-//	    Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
-//	    assertAnalyzesToReuse(a, "我购买 Tests 了道具和服装",
-//	        new String[] { "我", "购", "买", "Tests", "了", "道", "具", "和", "服", "装"},
-//	        new int[] { 0, 1, 2, 4, 10, 11, 12, 13, 14, 15 },
-//	        new int[] { 1, 2, 3, 9, 11, 12, 13, 14, 15, 16 });
-//	    assertAnalyzesToReuse(a, "我购买了道具和服装。",
-//	        new String[] { "我", "购", "买", "了", "道", "具", "和", "服", "装"},
-//	        new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
-//	        new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-//	 }
-//
-////FIXME:  fails - thread safety issues for cache?
-//	 /** blast some random strings through the analyzer */
-//@Test
-//	 public void testRandomStrings() throws Exception {
-//	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 10000*RANDOM_MULTIPLIER);
-//	 }
-//
-////FIXME:  fails - thread safety issues for cache?
-//	 /** blast some random large strings through the analyzer */
-//@Test
-//	 public void testRandomHugeStrings() throws Exception {
-//	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 200*RANDOM_MULTIPLIER, 8192);
-//	 }
+@Test
+	public void testReusableTokenStream() throws Exception
+	{
+	    Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);
+	    assertAnalyzesToReuse(a, "我购买 Tests 了道具和服装",
+	        new String[] { "我", "购", "买", "Tests", "了", "道", "具", "和", "服", "装"},
+	        new int[] { 0, 1, 2, 4, 10, 11, 12, 13, 14, 15 },
+	        new int[] { 1, 2, 3, 9, 11, 12, 13, 14, 15, 16 });
+	    assertAnalyzesToReuse(a, "我购买了道具和服装。",
+	        new String[] { "我", "购", "买", "了", "道", "具", "和", "服", "装"},
+	        new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
+	        new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+	 }
+
+	 /** blast some random strings through the analyzer */
+@Test
+	 public void testRandomStrings() throws Exception {
+	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 10000*RANDOM_MULTIPLIER);
+	 }
+
+	 /** blast some random large strings through the analyzer */
+@Test
+	 public void testRandomHugeStrings() throws Exception {
+	    checkRandomData(random, getStdTokenAnalyzer(CJKEmitType.HAN_SOLO), 200*RANDOM_MULTIPLIER, 8192);
+	 }
 
 @Test
 	 public void testEmptyTerm() throws IOException
@@ -320,6 +319,28 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		assertAnalyzesTo(no_cjk, "Simplified  中国地方志集成", new String[] {});
 		assertAnalyzesTo(no_cjk, "を知るための is hiragana except 知 which is kanji", new String[] {});
 		assertAnalyzesTo(no_cjk, "한국경제 hangul", new String[] {});
+	}
+
+	/**
+	 * By default, the assertions in MockTokenizer are turned on for extra checks that the consumer is consuming properly.
+	 */
+@Test
+	public void testWMockAnalyzer() throws Exception
+	{
+		Analyzer han_solo = new ReusableAnalyzerBase()
+		{
+		    @Override
+		    protected TokenStreamComponents createComponents(String fieldName, Reader reader)
+		    {
+		      Tokenizer source = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
+		      return new TokenStreamComponents(source, new CJKSieveFilter(source, CJKEmitType.HAN_SOLO));
+		    }
+		};
+		assertAnalyzesTo(han_solo, "南滿洲鐵道株式會社 traditional han only", new String[] {"南滿洲鐵道株式會社", "traditional", "han", "only"});
+		assertAnalyzesTo(han_solo, "Simplified  中国地方志集成", new String[] {"Simplified", "中国地方志集成"});
+		assertAnalyzesTo(han_solo, "を知るための is hiragana except 知 which is kanji", new String[] {});
+		assertAnalyzesTo(han_solo, "한국경제 hangul", new String[] {});
+		assertAnalyzesTo(han_solo, "No CJK here ... Des mot clés À LA CHAÎNE À Á ", new String[] {});
 	}
 
 	/**

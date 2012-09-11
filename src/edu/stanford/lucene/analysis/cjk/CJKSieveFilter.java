@@ -138,13 +138,16 @@ public class CJKSieveFilter extends TokenFilter
 	{
 		if (finalState != null)
 			restoreState(finalState);
+		super.end();
 	}
 
 	@Override
 	public void reset() throws IOException
 	{
-		if (cache != null)
-			iterator = cache.iterator();
+	    super.reset();
+	    cache = null;
+	    iterator = null;
+	    finalState = null;
 	}
 
 	private void fillCache() throws IOException
