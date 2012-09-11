@@ -33,6 +33,7 @@
 	</target>
 
 	<target name="jar" depends="compile" description="Build custom jar file" >
+		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/CJKSieve.jar">
 			<fileset dir="${build.dir}" includes="**/*.class"/>
 			<fileset dir="${src.dir}" includes="**/*.java"/>
