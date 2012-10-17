@@ -81,7 +81,7 @@ public class CJKSieveFilterFactory extends BaseTokenFilterFactory
 
 	    String emitIfStr = args.get("emitIf");
 	    if (emitIfStr == null)
-	      throw new RuntimeException("Configuration Error: missing parameter 'emitIf' for CJKSieveFilterFactory (must be one of:  japanese, hangul, han_solo, no_cjk");
+	      throw new RuntimeException("Configuration Error: missing parameter 'emitIf' for CJKSieveFilterFactory (must be one of:  japanese, hangul, han_solo, any_cjk, no_cjk");
 
 	    if (emitIfStr.equals("japanese"))
 	      emitType = CJKEmitType.JAPANESE;
@@ -89,10 +89,12 @@ public class CJKSieveFilterFactory extends BaseTokenFilterFactory
 	      emitType = CJKEmitType.HANGUL;
 	    else if (emitIfStr.equals("han_solo"))
 	      emitType = CJKEmitType.HAN_SOLO;
+	    else if (emitIfStr.equals("any_cjk"))
+		      emitType = CJKEmitType.ANY_CJK;
 	    else if (emitIfStr.equals("no_cjk"))
 	      emitType = CJKEmitType.NO_CJK;
 	    else
-	      throw new RuntimeException("Configuration Error: parameter 'emitIf' for CJKSieveFilterFactory must be one of:  japanese, hangul, han_solo, no_cjk");
+	      throw new RuntimeException("Configuration Error: parameter 'emitIf' for CJKSieveFilterFactory must be one of:  japanese, hangul, han_solo, any_cjk, no_cjk");
 	  }
 
 	  public TokenStream create(TokenStream input) {

@@ -47,6 +47,7 @@ import com.ibm.icu.lang.UScript;
  *  HANGUL, then only emit tokens if at least one Hangul character is found.
  *  JAPANESE, then only emit tokens if at least one Hiragana or Katakana character is found
  *  HAN_SOLO, then only emit tokens if at least one Han character is found, and no Hangul, Hiragana or Katakana chars are found
+ *  ANY_CJK, then only emit tokens if characters are found in Han, Hiragana, Katakana or Hangul scripts.
  *  NO_CJK, then only emit tokens if no characters are found in Han, Hiragana, Katakana or Hangul scripts.
  * <p>
  *
@@ -121,6 +122,11 @@ public class CJKSieveFilter extends TokenFilter
 							!tokensHaveHangul && !tokensHaveHiragana && !tokensHaveKatakana)
 						return true;
 					break;
+				case ANY_CJK:
+					if (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana)
+						return true;
+					else if (! (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana))
+						return false;
 				case NO_CJK:
 					if (! (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana))
 						return true;

@@ -213,6 +213,82 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 	}
 
 @Test
+	public void testAnyCJKEmitsIfHiraganaPresent() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"近世仮名遣い論の研究 -- chars 6, 8: い の are hiragana",
+			new String[] { "近", "世", "仮", "名", "遣", "い", "論", "の", "研", "究", "chars", "6", "8", "い", "の", "are", "hiragana" },
+			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 20, 23, 26, 28, 30, 34 },   // startOffsets
+			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 19, 21, 24, 27, 29, 33, 42 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<HIRAGANA>", "<IDEOGRAPHIC>", "<HIRAGANA>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<NUM>", "<NUM>", "<HIRAGANA>", "<HIRAGANA>", "<ALPHANUM>", "<ALPHANUM>"},
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1});  // positionIncrements
+	}
+
+@Test
+	public void testAnyCJKEmitsIfKatakanaPresent() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"マンガ is katakana",
+			new String[] { "マンガ", "is",  "katakana" },
+			new int[] { 0, 4, 7 },   // startOffsets
+			new int[] { 3, 6, 15 },  // endOffsets
+			new String[] { "<KATAKANA>", "<ALPHANUM>", "<ALPHANUM>" },
+			new int[] { 1, 1, 1});  // positionIncrements
+	}
+
+@Test
+	public void testAnyCJKEmitIfHangulPresent() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"한국경제 hangul",
+			new String[] { "한국경제", "hangul" },
+			new int[] { 0, 5 },   // startOffsets
+			new int[] { 4, 11 },  // endOffsets
+			new String[] { "<HANGUL>", "<ALPHANUM>" },
+			new int[] { 1, 1 });  // positionIncrements
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"한국사 의 壇君 인식 hangul and hancha",
+			new String[] { "한국사", "의", "壇", "君", "인식", "hangul", "and", "hancha" },
+			new int[] { 0, 4, 6, 7, 9, 12, 19, 23 },   // startOffsets
+			new int[] { 3, 5, 7, 8, 11, 18, 22, 29 },  // endOffsets
+			new String[] { "<HANGUL>", "<HANGUL>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<HANGUL>", "<ALPHANUM>", "<ALPHANUM>", "<ALPHANUM>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+	}
+
+@Test
+	public void testAnyCJKEmitsIfHanPresent() throws Exception
+	{
+		// traditional
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"南滿洲鐵道株式會社 traditional han",
+			new String[] { "南", "滿", "洲", "鐵", "道", "株", "式", "會", "社", "traditional", "han" },
+			new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 22 },   // startOffsets
+			new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 25 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<ALPHANUM>", "<ALPHANUM>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+	}
+
+@Test
+	public void testAnyCJKEmitIfMultiCJKPresent() throws Exception
+	{
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.ANY_CJK),
+			"日本マンガを知るためのブック・ガイド",
+			new String[] { "日", "本", "マンガ", "を", "知", "る", "た", "め", "の", "ブック", "ガイド" },
+			new int[] { 0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 15 },   // startOffsets
+			new int[] { 1, 2, 5, 6, 7, 8, 9, 10, 11, 14, 18 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<KATAKANA>", "<HIRAGANA>", "<IDEOGRAPHIC>", "<HIRAGANA>", "<HIRAGANA>", "<HIRAGANA>", "<HIRAGANA>", "<KATAKANA>", "<KATAKANA>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+	}
+
+
+@Test
+	public void testAnyCJKDoesNotEmitIfCJKAbsent() throws Exception
+	{
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.ANY_CJK);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("don't pass thru")), new String[] {});
+	}
+
+@Test
 	public void testReusableTokenStream() throws Exception
 	{
 	    Analyzer a = getStdTokenAnalyzer(CJKEmitType.HAN_SOLO);

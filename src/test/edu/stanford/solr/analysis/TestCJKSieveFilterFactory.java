@@ -88,6 +88,20 @@ public class TestCJKSieveFilterFactory extends BaseTokenStreamTestCase
 	}
 
 @Test
+	public void testAnyCJK() throws Exception
+	{
+		CJKSieveFilterFactory f = getCJKSieveFilterFactory("any_cjk");
+		TokenStream stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("壇君")));
+		assertTokenStreamContents(stream, new String[] { "壇", "君" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("マンガ is katakana")));
+		assertTokenStreamContents(stream, new String[] { "マンガ", "is", "katakana" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("한국경제 hangul only")));
+		assertTokenStreamContents(stream, new String[] { "한국경제", "hangul", "only" });
+		stream = f.create(new StandardTokenizer(TEST_VERSION_CURRENT, new StringReader("no cjk")));
+		assertTokenStreamContents(stream, new String[] {});
+	}
+
+@Test
 	public void testEmitArgBad() throws Exception
 	{
 		try
@@ -97,7 +111,7 @@ public class TestCJKSieveFilterFactory extends BaseTokenStreamTestCase
 		}
 		catch (RuntimeException e)
 		{
-			assertEquals("Configuration Error: parameter 'emitIf' for CJKSieveFilterFactory must be one of:  japanese, hangul, han_solo, no_cjk", e.getMessage());
+			assertEquals("Configuration Error: parameter 'emitIf' for CJKSieveFilterFactory must be one of:  japanese, hangul, han_solo, any_cjk, no_cjk", e.getMessage());
 		}
 	}
 
@@ -111,7 +125,7 @@ public class TestCJKSieveFilterFactory extends BaseTokenStreamTestCase
 		}
 		catch (RuntimeException e)
 		{
-			assertEquals("Configuration Error: missing parameter 'emitIf' for CJKSieveFilterFactory (must be one of:  japanese, hangul, han_solo, no_cjk", e.getMessage());
+			assertEquals("Configuration Error: missing parameter 'emitIf' for CJKSieveFilterFactory (must be one of:  japanese, hangul, han_solo, any_cjk, no_cjk", e.getMessage());
 		}
 	}
 
