@@ -58,6 +58,7 @@ If and only if you detect Hangul script, you want to Bigram:
 * *japanese*: emit only if Hiragana and/or Katakana script characters are present
 * *hangul*:   emit only if Hangul script characters are present
 * *han_solo*: emit only if Han script characters are present and there are no Hangul, Hiragana or Katakana chars present
+* *cj*:       emit only if Han, Hiragana, or Katakana characters are present and there are no Hangul chars present
 * *any_cjk*:  emit only if Han, Hiragana, Katakana or Hangul script characters are present
 * *no_cjk*:   emit only if no Han, Hiragana, Katakana or Hangul script characters are present
 

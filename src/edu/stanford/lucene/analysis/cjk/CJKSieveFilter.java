@@ -122,6 +122,10 @@ public class CJKSieveFilter extends TokenFilter
 							!tokensHaveHangul && !tokensHaveHiragana && !tokensHaveKatakana)
 						return true;
 					break;
+				case CJ:
+					if ( (tokensHaveHan || tokensHaveHiragana || tokensHaveKatakana) && !tokensHaveHangul)
+						return true;
+					break;
 				case ANY_CJK:
 					if (tokensHaveHan || tokensHaveHangul || tokensHaveHiragana || tokensHaveKatakana)
 						return true;

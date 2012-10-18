@@ -39,6 +39,8 @@ public enum CJKEmitType
 	JAPANESE,
 	/** emit only if Han script characters are present and there are no Hangul, Hiragana or Katakana chars present */
 	HAN_SOLO,
+	/** emit only if Han, Hiragana or Katakana script characters are present AND Hangul script characters are absent */
+	CJ,
 	/** emit only if Han, Hiragana, Katakana or Hangul script characters are present */
 	ANY_CJK,
 	/** emit only if no Han, Hiragana, Katakana or Hangul script characters are present */

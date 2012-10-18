@@ -30,8 +30,6 @@ package edu.stanford.lucene.analysis.cjk;
 import java.io.*;
 
 import org.apache.lucene.analysis.*;
-import org.apache.lucene.analysis.ReusableAnalyzerBase.TokenStreamComponents;
-import org.apache.lucene.analysis.cjk.CJKWidthFilter;
 import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.junit.*;
@@ -122,6 +120,36 @@ public class TestCJKSieveFilter extends BaseTokenStreamTestCase
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("を知るための is hiragana except 知 which is kanji")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("マンガ is katakana")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("日本マンガを知るためのブック・ガイド")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
+	}
+
+@Test
+	public void testCJEmitIfPresent() throws Exception
+	{
+		// hiragana, katakana
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.CJ),
+			"日本マンガを知るためのブック・ガイド",
+			new String[] { "日", "本", "マンガ", "を", "知", "る", "た", "め", "の", "ブック", "ガイド" },
+			new int[] { 0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 15 },   // startOffsets
+			new int[] { 1, 2, 5, 6, 7, 8, 9, 10, 11, 14, 18 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<KATAKANA>", "<HIRAGANA>", "<IDEOGRAPHIC>", "<HIRAGANA>", "<HIRAGANA>", "<HIRAGANA>", "<HIRAGANA>", "<KATAKANA>", "<KATAKANA>" },
+			new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });  // positionIncrements
+		// japanese modern kanji
+		assertAnalyzesTo( getStdTokenAnalyzer(CJKEmitType.CJ),
+			"仏教学 乱 禅",
+			new String[] { "仏", "教", "学", "乱", "禅" },
+			new int[] { 0, 1, 2, 4, 6 },   // startOffsets
+			new int[] { 1, 2, 3, 5, 7 },  // endOffsets
+			new String[] { "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>", "<IDEOGRAPHIC>" },
+			new int[] { 1, 1, 1, 1, 1 });  // positionIncrements
+	}
+
+@Test
+	public void testCJDoesNotEmitIfAbsentOrHangulPresent() throws Exception
+	{
+		Analyzer a = getStdTokenAnalyzer(CJKEmitType.CJ);
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국경제 hangul only")), new String[] {});
+		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("한국사 의 壇君 인식 hangul and hancha")), new String[] {});
 		assertTokenStreamContents(a.tokenStream("dummy", new StringReader("No CJK here ... Des mot clés À LA CHAÎNE À Á ")), new String[] {});
 	}
 
